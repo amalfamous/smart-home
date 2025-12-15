@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: smarthouse-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: smart-house
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - smarthouse-network
+
+  backend:
+    build:
+      context: ./Smart_Home_back
+      dockerfile: Dockerfile
+    container_name: smarthouse-backend
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/smart-house
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - smarthouse-network
+
+  frontend:
+    build:
+      context: ./smartHome-front
+      dockerfile: Dockerfile
+    container_name: smarthouse-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - smarthouse-network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: smarthouse-phpmyadmin
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: root
+    ports:
+      - "8081:80"
+    depends_on:
+      - mysql
+    networks:
+      - smarthouse-network
+
+volumes:
+  mysql-data:
+
+networks:
+  smarthouse-network:
+    driver: bridge
+  
